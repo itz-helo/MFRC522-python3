@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf8 -*-
 
 try:
@@ -84,7 +84,7 @@ class Reader:
     Reserved14     = 0x1E
     SerialSpeedReg = 0x1F
 
-    Reserved20        = 0x20  
+    Reserved20        = 0x20
     CRCResultRegM     = 0x21
     CRCResultRegL     = 0x22
     Reserved21        = 0x23
@@ -222,16 +222,15 @@ class Reader:
 
         self.Write_MFRC522(self.CommandReg, self.PCD_IDLE)
 
-        while(i < len(sendData)):
-            self.Write_MFRC522(self.FIFODataReg, sendData[i])
-            i += 1
+        for element in sendData:
+            self.Write_MFRC522(self.FIFODataReg, element)
 
         self.Write_MFRC522(self.CommandReg, command)
 
         if command == self.PCD_TRANSCEIVE:
             self.SetBitMask(self.BitFramingReg, 0x80)
 
-        #Attempt to read data
+        # Attempt to read data
         i = 2000
         while True:
             n = self.Read_MFRC522(self.CommIrqReg)
@@ -243,10 +242,10 @@ class Reader:
 
         self.ClearBitMask(self.BitFramingReg, 0x80)
 
-        #We broke out early, did we find data or hit an error?
+        # We broke out early, did we find data or hit an error?
         if i != 0:
             if (self.Read_MFRC522(self.ErrorReg) & 0x1B) == 0x00:
-                #No error, so looks like we're good
+                # No error, so looks like we're good
                 status = self.MI_OK
 
                 if n & irqEn & 0x01:
@@ -282,7 +281,9 @@ class Reader:
         self.Write_MFRC522(self.BitFramingReg, 0x07)
 
         TagType.append(reqMode)
-        status, backData, backBits = self.MFRC522_ToCard(self.PCD_TRANSCEIVE, TagType)
+        status, backData, backBits = self.MFRC522_ToCard(
+            self.PCD_TRANSCEIVE, TagType
+        )
 
         if ((status != self.MI_OK) | (backBits != 0x10)):
             status = self.MI_ERR
@@ -300,7 +301,9 @@ class Reader:
         serNum.append(self.PICC_ANTICOLL)
         serNum.append(0x20)
 
-        status, backData, backBits = self.MFRC522_ToCard(self.PCD_TRANSCEIVE, serNum)
+        status, backData, backBits = self.MFRC522_ToCard(
+            self.PCD_TRANSCEIVE, serNum
+        )
 
         if(status == self.MI_OK):
             i = 0
@@ -318,20 +321,23 @@ class Reader:
     def CalulateCRC(self, pIndata):
         self.ClearBitMask(self.DivIrqReg, 0x04)
         self.SetBitMask(self.FIFOLevelReg, 0x80)
-        i = 0
-        while i < len(pIndata):
-            self.Write_MFRC522(self.FIFODataReg, pIndata[i])
-            i = i + 1
+
+        for element in pIndata:
+            self.Write_MFRC522(self.FIFODataReg, element)
+
         self.Write_MFRC522(self.CommandReg, self.PCD_CALCCRC)
+
         i = 0xFF
         while True:
             n = self.Read_MFRC522(self.DivIrqReg)
             i = i - 1
             if not ((i != 0) and not (n & 0x04)):
                 break
+
         pOutData = []
         pOutData.append(self.Read_MFRC522(self.CRCResultRegL))
         pOutData.append(self.Read_MFRC522(self.CRCResultRegM))
+
         return pOutData
 
     def MFRC522_SelectTag(self, serNum):
@@ -363,27 +369,21 @@ class Reader:
         buff.append(BlockAddr)
 
         # Now we need to append the authKey which usually is 6 bytes of 0xFF
-        i = 0
-        while(i < len(Sectorkey)):
-            buff.append(Sectorkey[i])
-            i = i + 1
-        i = 0
+        buff += Sectorkey
 
         # Next we append the first 4 bytes of the UID
-        while(i < 4):
-            buff.append(serNum[i])
-            i = i + 1
+        buff += serNum[0:4]
 
         # Now we start the authentication itself
         status, backData, backLen = self.MFRC522_ToCard(self.PCD_AUTHENT, buff)
 
+        status2reg = self.Read_MFRC522(self.Status2Reg)
+        if status2reg != 0x08:
+            raise AuthenticationError("Status2Reg: %X" % (status2reg))
+
         # Check if an error occurred
         if not(status == self.MI_OK):
             raise StatusNotSuccessError(status)
-
-        status2reg = self.Read_MFRC522(self.Status2Reg) & 0x08
-        if status2reg != 0:
-            raise AuthenticationError("Status2Reg: %X" % (status2reg))
 
         # Return the status
         return status
@@ -395,11 +395,12 @@ class Reader:
         recvData = []
         recvData.append(self.PICC_READ)
         recvData.append(blockAddr)
-        pOut = self.CalulateCRC(recvData)
-        recvData.append(pOut[0])
-        recvData.append(pOut[1])
+        crc = self.CalulateCRC(recvData)
+        recvData += crc
 
-        (status, backData, backLen) = self.MFRC522_ToCard(self.PCD_TRANSCEIVE, recvData)
+        (status, backData, backLen) = self.MFRC522_ToCard(
+            self.PCD_TRANSCEIVE, recvData
+        )
 
         if not(status == self.MI_OK):
             raise StatusNotSuccessError(status)
@@ -411,23 +412,21 @@ class Reader:
         buff.append(self.PICC_WRITE)
         buff.append(blockAddr)
         crc = self.CalulateCRC(buff)
-        buff.append(crc[0])
-        buff.append(crc[1])
-        (status, backData, backLen) = self.MFRC522_ToCard(self.PCD_TRANSCEIVE, buff)
+        buff += crc
+        (status, backData, backLen) = self.MFRC522_ToCard(
+            self.PCD_TRANSCEIVE, buff
+        )
 
         if not(status == self.MI_OK) or not(backLen == 4) or not((backData[0] & 0x0F) == 0x0A):
             raise StatusNotSuccessError(status)
 
-        # print(str(backLen) + " backdata &0x0F == 0x0A " + str(backData[0] & 0x0F))
-        i = 0
-        buf = []
-        while i < 16:
-            buf.append(writeData[i])
-            i = i + 1
-        crc = self.CalulateCRC(buf)
-        buf.append(crc[0])
-        buf.append(crc[1])
-        (status, backData, backLen) = self.MFRC522_ToCard(self.PCD_TRANSCEIVE, buf)
+        buff = writeData[0:16]
+
+        crc = self.CalulateCRC(buff)
+        buff += crc
+        (status, backData, backLen) = self.MFRC522_ToCard(
+            self.PCD_TRANSCEIVE, buff
+        )
         if not(status == self.MI_OK) or not(backLen == 4) or not((backData[0] & 0x0F) == 0x0A):
             raise StatusNotSuccessError(status)
 
@@ -460,4 +459,8 @@ class Reader:
 
         self.Write_MFRC522(self.TxAutoReg, 0x40)
         self.Write_MFRC522(self.ModeReg, 0x3D)
+
+        # Set antenna gain to 48dB
+        self.Write_MFRC522(self.RFCfgReg, 0x70)
+
         self.AntennaOn()

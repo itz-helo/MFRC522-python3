@@ -2,7 +2,7 @@
 # -*- coding: utf8 -*-
 
 import RPi.GPIO as GPIO
-import MFRC522
+from MFRC522 import MFRC522
 import signal
 
 continue_reading = True
@@ -47,7 +47,7 @@ while continue_reading:
         MIFAREReader.MFRC522_SelectTag(uid)
 
         # Authenticate
-        status = MIFAREReader.MFRC522_Auth(MIFAREReader.PICC_AUTHENT1A, 8, key, uid)
+        status = MIFAREReader.MFRC522_Auth(MIFAREReader.PICC_AUTHENT1A, 4, key, uid)
         print("\n")
 
         # Check if authenticated
@@ -60,21 +60,21 @@ while continue_reading:
             for x in range(0, 16):
                 data.append(0xFF)
 
-            print("Sector 8 looked like this:")
-            # Read block 8
-            addr, data = MIFAREReader.MFRC522_Read(8)
-            print("Sector " + str(addr) + " " + str(data))
+            print("Sector 4 looked like this:")
+            # Read block 4
+            addr, card_data = MIFAREReader.MFRC522_Read(4)
+            print("Sector " + str(addr) + " " + str(card_data))
             print("\n")
 
-            print("Sector 8 will now be filled with 0xFF:")
+            print("Sector 4 will now be filled with 0xFF:")
             # Write the data
-            MIFAREReader.MFRC522_Write(8, data)
+            MIFAREReader.MFRC522_Write(4, data)
             print("\n")
 
             print("It now looks like this:")
             # Check to see if it was written
-            addr, data = MIFAREReader.MFRC522_Read(8)
-            print("Sector " + str(addr) + " " + str(data))
+            addr, card_data = MIFAREReader.MFRC522_Read(4)
+            print("Sector " + str(addr) + " " + str(card_data))
             print("\n")
 
             data = []
@@ -83,13 +83,13 @@ while continue_reading:
                 data.append(0x00)
 
             print("Now we fill it with 0x00:")
-            MIFAREReader.MFRC522_Write(8, data)
+            MIFAREReader.MFRC522_Write(4, data)
             print("\n")
 
             print("It is now empty:")
             # Check to see if it was written
-            addr, data = MIFAREReader.MFRC522_Read(8)
-            print("Sector " + str(addr) + " " + str(data))
+            addr, card_data = MIFAREReader.MFRC522_Read(4)
+            print("Sector " + str(addr) + " " + str(card_data))
             print("\n")
 
             # Stop
@@ -99,3 +99,5 @@ while continue_reading:
             continue_reading = False
         else:
             print("Authentication error")
+
+GPIO.cleanup()
