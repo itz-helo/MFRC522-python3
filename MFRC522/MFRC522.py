@@ -418,7 +418,7 @@ class Reader:
         if not(status == self.MI_OK) or not(backLen == 4) or not((backData[0] & 0x0F) == 0x0A):
             raise StatusNotSuccessError(status)
 
-        # print str(backLen) + " backdata &0x0F == 0x0A " + str(backData[0] & 0x0F)
+        # print(str(backLen) + " backdata &0x0F == 0x0A " + str(backData[0] & 0x0F))
         i = 0
         buf = []
         while i < 16:

@@ -11,7 +11,7 @@ continue_reading = True
 # Capture SIGINT for cleanup when the script is aborted
 def end_read(signal, frame):
     global continue_reading
-    print "Ctrl+C captured, ending read."
+    print("Ctrl+C captured, ending read.")
     continue_reading = False
     GPIO.cleanup()
 
@@ -23,8 +23,8 @@ signal.signal(signal.SIGINT, end_read)
 MIFAREReader = MFRC522.Reader(0, 0, 22)
 
 # Welcome message
-print "Welcome to the MFRC522 data read example"
-print "Press Ctrl-C to stop."
+print("Welcome to the MFRC522 data read example")
+print("Press Ctrl-C to stop.")
 
 # This loop keeps checking for chips. If one is near it will get the UID and authenticate
 while continue_reading:
@@ -33,7 +33,7 @@ while continue_reading:
 
     # If a card is found
     if status == MIFAREReader.MI_OK:
-        print "Card detected"
+        print("Card detected")
 
     # Get the UID of the card
     (status, uid) = MIFAREReader.MFRC522_Anticoll()
@@ -41,7 +41,7 @@ while continue_reading:
     # If we have the UID, continue
     if status == MIFAREReader.MI_OK:
         # Print UID
-        print "Card read UID: " + str(uid[0]) + "," + str(uid[1]) + "," + str(uid[2]) + "," + str(uid[3])
+        print("Card read UID: " + str(uid[0]) + "," + str(uid[1]) + "," + str(uid[2]) + "," + str(uid[3]))
 
         # This is the default key for authentication
         key = [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]
@@ -55,8 +55,8 @@ while continue_reading:
         # Check if authenticated
         if status == MIFAREReader.MI_OK:
             addr, data = MIFAREReader.MFRC522_Read(8)
-            print "Sector " + str(addr) + " " + str(data)
+            print("Sector " + str(addr) + " " + str(data))
 
             MIFAREReader.MFRC522_StopCrypto1()
         else:
-            print "Authentication error"
+            print("Authentication error")
