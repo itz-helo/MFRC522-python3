@@ -7,7 +7,7 @@ except ImportError:
     try:
         import CHIP_IO.GPIO as GPIO
     except ImportError:
-        #Maybe there is another general GPIO package we can use?
+        # Maybe there is another general GPIO package we can use?
         import GPIO
 
 import spidev
@@ -212,6 +212,7 @@ class Reader:
         if command == self.PCD_AUTHENT:
             irqEn = 0x12
             waitIRq = 0x10
+
         if command == self.PCD_TRANSCEIVE:
             irqEn = 0x77
             waitIRq = 0x30
@@ -264,10 +265,9 @@ class Reader:
                     if n > self.MAX_LEN:
                         n = self.MAX_LEN
 
-                    i = 0
-                    while i < n:
+                    for i in range(0, n):
                         backData.append(self.Read_MFRC522(self.FIFODataReg))
-                        i = i + 1
+
             else:
                 status = self.MI_ERR
 
@@ -343,15 +343,13 @@ class Reader:
     def MFRC522_SelectTag(self, serNum):
         backData = []
         buf = []
+
         buf.append(self.PICC_SElECTTAG)
         buf.append(0x70)
-        i = 0
-        while i < 5:
-            buf.append(serNum[i])
-            i = i + 1
-        pOut = self.CalulateCRC(buf)
-        buf.append(pOut[0])
-        buf.append(pOut[1])
+        buf += serNum[0:5]
+
+        crc = self.CalulateCRC(buf)
+        buf += crc
         status, backData, backLen = self.MFRC522_ToCard(self.PCD_TRANSCEIVE, buf)
 
         if (status == self.MI_OK) and (backLen == 0x18):
@@ -378,8 +376,9 @@ class Reader:
         status, backData, backLen = self.MFRC522_ToCard(self.PCD_AUTHENT, buff)
 
         status2reg = self.Read_MFRC522(self.Status2Reg)
+        errorReg = self.Read_MFRC522(self.ErrorReg)
         if status2reg != 0x08:
-            raise AuthenticationError("Status2Reg: %X" % (status2reg))
+            raise AuthenticationError("Status2Reg: %X ErrorReg: %X" % (status2reg, errorReg))
 
         # Check if an error occurred
         if not(status == self.MI_OK):
@@ -434,16 +433,14 @@ class Reader:
             return True
 
     def MFRC522_DumpClassic1K(self, key, uid):
-        i = 0
         data = []
-        while i < 64:
+        for i in range(0, 65):
             status = self.MFRC522_Auth(self.PICC_AUTHENT1A, i, key, uid)
             # Check if authenticated
             if status == self.MI_OK:
                 data.append(self.MFRC522_Read(i))
             else:
                 raise StatusNotSuccessError(status)
-            i = i + 1
 
         return data
 
@@ -454,9 +451,8 @@ class Reader:
 
         self.Write_MFRC522(self.TModeReg, 0x8D)
         self.Write_MFRC522(self.TPrescalerReg, 0x3E)
-        self.Write_MFRC522(self.TReloadRegL, 30)
-        self.Write_MFRC522(self.TReloadRegH, 0)
-
+        self.Write_MFRC522(self.TReloadRegL, 0x1E)
+        self.Write_MFRC522(self.TReloadRegH, 0x00)
         self.Write_MFRC522(self.TxAutoReg, 0x40)
         self.Write_MFRC522(self.ModeReg, 0x3D)
 
