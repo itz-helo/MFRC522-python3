@@ -26,7 +26,7 @@ if IS_LINUX:
                 for line in f:
                     line = line.strip()
                     if line.startswith('Hardware'):
-                        if "BCM2708" in line:
+                        if "BCM2708" or "BCM2835" in line:
                             PLATFORM = RASPBERRY_PI
                             break
                         elif "Allwinner" in line:
